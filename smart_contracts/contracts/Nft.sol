@@ -3,8 +3,12 @@
 pragma solidity ^0.8.27;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Nft is ERC721URIStorage {
+
+    event TokenCreated(uint256 tokenId, string tokenURI, uint256 price, address owner);
+    event TokenBought(uint256 tokenId, uint256 price, address seller, address buyer);
 
     struct TokenConfig {
         uint256 price;
@@ -12,7 +16,8 @@ contract Nft is ERC721URIStorage {
     }
 
     address public USDTTokenAddress;
-    uint256 private _tokenIds;
+    uint256 private _tokenId = 1;
+    uint256 private _defaultPriceIncreasePer = 10;
 
     mapping (uint256 => TokenConfig) public tokenConfig;
 
@@ -20,12 +25,49 @@ contract Nft is ERC721URIStorage {
         USDTTokenAddress = USDT;
     }
 
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(_exists(tokenId), "Token does not exist");
+        require(tokenConfig[tokenId].owner == msg.sender, "You are not the owner");
+        _;
+    }
+
     function createNew(string memory tokenURI,uint256 price)
         public
     {
-        _mint(msg.sender, _tokenIds);
-        _setTokenURI(_tokenIds, tokenURI);
-        tokenConfig[_tokenIds] = TokenConfig(price, msg.sender);
-        _tokenIds++;
+        _mint(msg.sender, _tokenId);
+        _setTokenURI(_tokenId, tokenURI);
+        tokenConfig[_tokenId] = TokenConfig(price, msg.sender);
+
+        emit TokenCreated(_tokenId, tokenURI, price, msg.sender);
+        _tokenId++;
+    }
+
+    function buy(uint256 tokenId) public {
+        require(_exists(tokenId), "Token does not exist");
+        require(msg.sender != tokenConfig[tokenId].owner, "You are the owner");
+        require(tokenConfig[tokenId].price > 0, "Token not for sale");
+        require(IERC20(USDTTokenAddress).balanceOf(msg.sender) >= tokenConfig[tokenId].price, "Insufficient USDT balance");
+        _collectPayment(tokenId);
+        _transfer(tokenConfig[tokenId].owner, msg.sender, tokenId);
+        tokenConfig[tokenId].owner = msg.sender;
+    }
+
+    function setPrice(uint256 tokenId, uint256 price) public onlyTokenOwner(tokenId) {
+        tokenConfig[tokenId].price = price;
+    }
+
+
+    function _increasePrice(uint256 tokenId) internal {
+        require(_exists(tokenId), "Token does not exist");
+        require(tokenConfig[tokenId].owner == msg.sender, "You are not the owner");
+        uint256 newPrice  = tokenConfig[tokenId].price + (tokenConfig[tokenId].price * _defaultPriceIncreasePer) / 100;
+        tokenConfig[tokenId].price = newPrice;
+    }
+    function _collectPayment(uint256 tokenId) internal {
+        require(IERC20(USDTTokenAddress).transferFrom(msg.sender, tokenConfig[tokenId].owner, tokenConfig[tokenId].price), "Payment failed");
+    }
+
+    function _exists(uint256 tokenId) internal view returns (bool) {
+        return tokenId < _tokenId;
     }
 }
