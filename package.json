@@ -1,0 +1,16 @@
+{
+  "name": "nft_market",
+  "version": "1.0.0",
+  "description": "This is an example nft market project. User can create his own nft, add a picture and set initial USDC price.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}
