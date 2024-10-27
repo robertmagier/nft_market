@@ -124,10 +124,11 @@ describe('Nft', function () {
       const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
       await nft.create(uri, price);
       const currentNft = nft.connect(otherAccount);
+      const expectedCost = await nft.expectedBuyCost(1);
 
-      await usdt.transfer(otherAccount, price);
+      await usdt.transfer(otherAccount, expectedCost);
       const currentUsdt = usdt.connect(otherAccount);
-      await currentUsdt.approve(nft, price);
+      await currentUsdt.approve(nft, expectedCost);
       await currentNft.buy(1);
       const tokenConfig = await nft.tokenConfig(1);
       expect(tokenConfig.price).to.be.equal(price * 1.1);
@@ -140,9 +141,10 @@ describe('Nft', function () {
       await nft.create(uri, price);
       const currentNft = nft.connect(otherAccount);
 
-      await usdt.transfer(otherAccount, price);
+      const expectedCost = await nft.expectedBuyCost(1);
+      await usdt.transfer(otherAccount, expectedCost);
       const currentUsdt = usdt.connect(otherAccount);
-      await currentUsdt.approve(nft, price);
+      await currentUsdt.approve(nft, expectedCost);
       const buyTx = await currentNft.buy(1);
       expect(buyTx).to.emit(nft, 'Transfer');
       await expect(buyTx)
@@ -198,6 +200,87 @@ describe('Nft', function () {
       await nft.create(uri, price);
       await usdt.connect(otherAccount).approve(nft, price);
       await expect(nft.connect(otherAccount).buy(1)).to.be.reverted;
+    });
+  });
+
+  describe('Fees collection', async function () {
+    it('Fees are calculated on top of buying price', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      const currentNft = nft.connect(otherAccount);
+      const expectedCost = await nft.expectedBuyCost(1);
+      const expectedFee = await nft.expectedFee(1);
+
+      expect(expectedFee).to.be.equal(expectedCost - BigInt(price));
+      expect(Number(expectedFee)).to.be.equal(
+        (Number(price) * Number(await nft.feePercentage())) / Number(100)
+      );
+    });
+    it('Nft Smart Contract collects fees', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      const currentNft = nft.connect(otherAccount);
+      const expectedCost = await nft.expectedBuyCost(1);
+      const expectedFee = await nft.expectedFee(1);
+
+      await usdt.transfer(otherAccount, expectedCost);
+      const currentUsdt = usdt.connect(otherAccount);
+      await currentUsdt.approve(nft, expectedCost);
+
+      await currentNft.buy(1);
+
+      const nftBalance = await usdt.balanceOf(nft);
+      expect(nftBalance).to.be.equal(expectedFee);
+    });
+
+    it('Smart contract owner can collect fees', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      const currentNft = nft.connect(otherAccount);
+      const expectedCost = await nft.expectedBuyCost(1);
+      const expectedFee = await nft.expectedFee(1);
+
+      await usdt.transfer(otherAccount, expectedCost);
+      const currentUsdt = usdt.connect(otherAccount);
+      await currentUsdt.approve(nft, expectedCost);
+
+      await currentNft.buy(1);
+
+      const ownerBalanceBefore = await usdt.balanceOf(owner);
+      await nft.connect(owner).withdrawFees();
+      const ownerBalanceAfter = await usdt.balanceOf(owner);
+
+      expect(ownerBalanceAfter - ownerBalanceBefore).to.be.equal(expectedFee);
+    });
+
+    it('Smart Contract Owner can change fee %', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const newFeePercentage = 20;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await nft.setFeePercentage(newFeePercentage);
+      const currentNft = nft.connect(otherAccount);
+      const expectedCost = await nft.expectedBuyCost(1);
+      const expectedFee = await nft.expectedFee(1);
+
+      await usdt.transfer(otherAccount, expectedCost);
+      const currentUsdt = usdt.connect(otherAccount);
+      await currentUsdt.approve(nft, expectedCost);
+
+      await currentNft.buy(1);
+
+      const nftBalance = await usdt.balanceOf(nft);
+      expect(nftBalance).to.be.equal(expectedFee);
+
+      await expect(nft.connect(otherAccount).setFeePercentage(10)).to.be
+        .reverted;
     });
   });
 });
