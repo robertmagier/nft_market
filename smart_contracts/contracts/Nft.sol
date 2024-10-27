@@ -32,14 +32,16 @@ contract Nft is ERC721URIStorage {
     }
 
     function create(string memory tokenURI,uint256 price)
-        public
+        public returns (uint256)
     {
-        _mint(msg.sender, _tokenId);
-        _setTokenURI(_tokenId, tokenURI);
-        tokenConfig[_tokenId] = TokenConfig(price, msg.sender);
+        const newId = _tokenId
+        _mint(msg.sender, newId);
+        _setTokenURI(newId, tokenURI);
+        tokenConfig[newId] = TokenConfig(price, msg.sender);
 
-        emit TokenCreated(_tokenId, tokenURI, price, msg.sender);
+        emit TokenCreated(newId, tokenURI, price, msg.sender);
         _tokenId++;
+        return newId;
     }
 
     function buy(uint256 tokenId) public {
