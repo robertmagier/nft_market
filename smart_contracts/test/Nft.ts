@@ -68,113 +68,135 @@ describe('Nft', function () {
       await expect(currentNft.create(uri, price)).to.be.revertedWith(
         'URI is empty'
       );
-
-      it('token ids should be incremental', async function () {
-        const uri = 'testURI';
-        const price = 1000;
-        const { otherAccount, nft } = await loadFixture(deployNft);
-        let currentNft = nft.connect(otherAccount);
-        await currentNft.create(uri, price);
-        await currentNft.create(uri, price);
-        const lastCreateTx = await currentNft.create(uri, price);
-
-        expect(lastCreateTx)
-          .to.emit(nft, 'TokenCreated')
-          .withArgs(3, uri, price, otherAccount.address);
-
-        expect(await nft.balanceOf(otherAccount.address)).to.be.equal(3);
-      });
     });
 
-    //   it('Should set the right owner', async function () {
-    //     const { lock, owner } = await loadFixture(deployOneYearLockFixture);
+    it('token ids should be incremental', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { otherAccount, nft } = await loadFixture(deployNft);
+      let currentNft = nft.connect(otherAccount);
+      await currentNft.create(uri, price);
+      await currentNft.create(uri, price);
+      const lastCreateTx = await currentNft.create(uri, price);
 
-    //     expect(await lock.owner()).to.equal(owner.address);
-    //   });
+      expect(lastCreateTx)
+        .to.emit(nft, 'TokenCreated')
+        .withArgs(3, uri, price, otherAccount.address);
 
-    //   it('Should receive and store the funds to lock', async function () {
-    //     const { lock, lockedAmount } = await loadFixture(
-    //       deployOneYearLockFixture
-    //     );
+      expect(await nft.balanceOf(otherAccount.address)).to.be.equal(3);
+    });
+  });
 
-    //     expect(await hre.ethers.provider.getBalance(lock.target)).to.equal(
-    //       lockedAmount
-    //     );
-    //   });
+  // Implement unit tests for smart contract buy functionality:
 
-    //   it('Should fail if the unlockTime is not in the future', async function () {
-    //     // We don't use the fixture here because we want a different deployment
-    //     const latestTime = await time.latest();
-    //     const Lock = await hre.ethers.getContractFactory('Lock');
-    //     await expect(Lock.deploy(latestTime, { value: 1 })).to.be.revertedWith(
-    //       'Unlock time should be in the future'
-    //     );
-    //   });
-    // });
+  // Nft Owner should not be able to buy his/her nft.
+  // Owner can transfer NFT. In this case price doesn't change.
+  // Buy function increases price automatically.
+  // Owner can change NFT price.
+  // If price is set to 0 then buying is disabled.
+  // If buyer didn't approve USDC for our smart contract then buy function should fail.
+  // If user doesn't have enough USDC then buy should fail.
 
-    // describe('Withdrawals', function () {
-    //   describe('Validations', function () {
-    //     it('Should revert with the right error if called too soon', async function () {
-    //       const { lock } = await loadFixture(deployOneYearLockFixture);
+  describe('Buy', async function () {
+    it('Nft Owner should not be able to his nft', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { nft, owner } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await expect(nft.buy(1)).to.be.revertedWith('You are the owner');
+    });
 
-    //       await expect(lock.withdraw()).to.be.revertedWith(
-    //         "You can't withdraw yet"
-    //       );
-    //     });
+    it('Owner can transfer token to someone else. In this case price doesnt change', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await nft.transfer(otherAccount.address, 1);
+      const tokenConfig = await nft.tokenConfig(1);
+      expect(tokenConfig.owner).to.be.equal(otherAccount.address);
+      expect(tokenConfig.price).to.be.equal(price);
+    });
 
-    //     it('Should revert with the right error if called from another account', async function () {
-    //       const { lock, unlockTime, otherAccount } = await loadFixture(
-    //         deployOneYearLockFixture
-    //       );
+    it('Buy function increases price automatically.', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      const currentNft = nft.connect(otherAccount);
 
-    //       // We can increase the time in Hardhat Network
-    //       await time.increaseTo(unlockTime);
+      await usdt.transfer(otherAccount, price);
+      const currentUsdt = usdt.connect(otherAccount);
+      await currentUsdt.approve(nft, price);
+      await currentNft.buy(1);
+      const tokenConfig = await nft.tokenConfig(1);
+      expect(tokenConfig.price).to.be.equal(price * 1.1);
+    });
 
-    //       // We use lock.connect() to send a transaction from another account
-    //       await expect(lock.connect(otherAccount).withdraw()).to.be.revertedWith(
-    //         "You aren't the owner"
-    //       );
-    //     });
+    it('Buy should emit events.', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      const currentNft = nft.connect(otherAccount);
 
-    //     it("Shouldn't fail if the unlockTime has arrived and the owner calls it", async function () {
-    //       const { lock, unlockTime } = await loadFixture(
-    //         deployOneYearLockFixture
-    //       );
+      await usdt.transfer(otherAccount, price);
+      const currentUsdt = usdt.connect(otherAccount);
+      await currentUsdt.approve(nft, price);
+      const buyTx = await currentNft.buy(1);
+      expect(buyTx).to.emit(nft, 'Transfer');
+      await expect(buyTx)
+        .to.emit(nft, 'TokenBought')
+        .withArgs(1, price, otherAccount.address, owner.address);
+    });
 
-    //       // Transactions are sent using the first signer by default
-    //       await time.increaseTo(unlockTime);
+    it('Owner can change NFT price.', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const newPrice = 2000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await nft.setPrice(1, newPrice);
+      const tokenConfig = await nft.tokenConfig(1);
+      expect(tokenConfig.price).to.be.equal(newPrice);
+    });
 
-    //       await expect(lock.withdraw()).not.to.be.reverted;
-    //     });
-    //   });
+    it('Non-owner can not change NFT price.', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const newPrice = 2000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await expect(
+        nft.connect(otherAccount).setPrice(1, newPrice)
+      ).to.be.revertedWith('You are not the owner');
+    });
 
-    //   describe('Events', function () {
-    //     it('Should emit an event on withdrawals', async function () {
-    //       const { lock, unlockTime, lockedAmount } = await loadFixture(
-    //         deployOneYearLockFixture
-    //       );
+    it('If price is set to 0 then buying is disabled.', async function () {
+      const uri = 'testURI';
+      const price = 0;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await expect(nft.connect(otherAccount).buy(1)).to.be.revertedWith(
+        'Token not for sale'
+      );
+    });
 
-    //       await time.increaseTo(unlockTime);
+    it('If buyer didnt approve USDC for our smart contract then buy function should fail.', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await usdt.transfer(otherAccount, 2 * price);
+      await expect(nft.connect(otherAccount).buy(1)).to.be.reverted;
+    });
 
-    //       await expect(lock.withdraw())
-    //         .to.emit(lock, 'Withdrawal')
-    //         .withArgs(lockedAmount, anyValue); // We accept any value as `when` arg
-    //     });
-    //   });
-
-    //   describe('Transfers', function () {
-    //     it('Should transfer the funds to the owner', async function () {
-    //       const { lock, unlockTime, lockedAmount, owner } = await loadFixture(
-    //         deployOneYearLockFixture
-    //       );
-
-    //       await time.increaseTo(unlockTime);
-
-    //       await expect(lock.withdraw()).to.changeEtherBalances(
-    //         [owner, lock],
-    //         [lockedAmount, -lockedAmount]
-    //       );
-    //     });
-    //   });
+    it('If user doesnt have enough USDC then buy should fail.', async function () {
+      const uri = 'testURI';
+      const price = 1000;
+      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      await nft.create(uri, price);
+      await usdt.connect(otherAccount).approve(nft, price);
+      await expect(nft.connect(otherAccount).buy(1)).to.be.reverted;
+    });
   });
 });
