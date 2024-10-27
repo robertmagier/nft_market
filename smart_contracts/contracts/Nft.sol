@@ -3,9 +3,10 @@
 pragma solidity ^0.8.27;
 
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-contract Nft is ERC721URIStorage {
+contract Nft is ERC721URIStorage, Ownable {
   event TokenCreated(
     uint256 tokenId,
     string tokenURI,
@@ -24,13 +25,14 @@ contract Nft is ERC721URIStorage {
     address owner;
   }
 
+  
   address public USDTTokenAddress;
   uint256 private _tokenId = 1;
   uint256 private _defaultPriceIncreasePer = 10;
 
   mapping(uint256 => TokenConfig) public tokenConfig;
 
-  constructor(address USDT) ERC721('USDC Paid Nft', 'UPN') {
+  constructor(address USDT) ERC721('USDC Paid Nft', 'UPN') Ownable(msg.sender) {
     USDTTokenAddress = USDT;
   }
 

@@ -24,8 +24,9 @@ describe('Nft', function () {
 
   describe('Deployment', function () {
     it('Should set USDT address', async function () {
-      const { usdt, nft } = await loadFixture(deployNft);
+      const { usdt, nft, owner } = await loadFixture(deployNft);
       expect(await nft.USDTTokenAddress()).to.be.equal(await usdt.getAddress());
+      expect(await nft.owner()).to.be.equal(owner.address);
     });
   });
 
