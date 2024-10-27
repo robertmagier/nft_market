@@ -44,7 +44,6 @@ contract Nft is ERC721URIStorage {
     string memory tokenURI,
     uint256 price
   ) public returns (uint256) {
-
     require(bytes(tokenURI).length > 0, 'URI is empty');
     uint256 newId = _tokenId;
     _mint(msg.sender, newId);
@@ -67,7 +66,16 @@ contract Nft is ERC721URIStorage {
     );
     _collectPayment(tokenId);
     _transfer(tokenConfig[tokenId].owner, msg.sender, tokenId);
+
+    emit TokenBought(
+      tokenId,
+      tokenConfig[tokenId].price,
+      msg.sender,
+      tokenConfig[tokenId].owner
+    );
+
     tokenConfig[tokenId].owner = msg.sender;
+    _increasePrice(tokenId);
   }
 
   function setPrice(
@@ -75,6 +83,14 @@ contract Nft is ERC721URIStorage {
     uint256 price
   ) public onlyTokenOwner(tokenId) {
     tokenConfig[tokenId].price = price;
+  }
+
+  function transfer(
+    address to,
+    uint256 tokenId
+  ) external onlyTokenOwner(tokenId) {
+    _transfer(msg.sender, to, tokenId);
+    tokenConfig[tokenId].owner = to;
   }
 
   function _increasePrice(uint256 tokenId) internal {
