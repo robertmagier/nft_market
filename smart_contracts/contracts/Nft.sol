@@ -44,6 +44,8 @@ contract Nft is ERC721URIStorage {
     string memory tokenURI,
     uint256 price
   ) public returns (uint256) {
+
+    require(bytes(tokenURI).length > 0, 'URI is empty');
     uint256 newId = _tokenId;
     _mint(msg.sender, newId);
     _setTokenURI(newId, tokenURI);
