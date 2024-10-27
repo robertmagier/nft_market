@@ -25,8 +25,8 @@ contract Nft is ERC721URIStorage, Ownable {
     address owner;
   }
 
-  
   address public USDTTokenAddress;
+  uint256 public feePercentage = 5;
   uint256 private _tokenId = 1;
   uint256 private _defaultPriceIncreasePer = 10;
 
@@ -57,6 +57,18 @@ contract Nft is ERC721URIStorage, Ownable {
     return newId;
   }
 
+  function setFeePercentage(uint256 newFeePercentage) public onlyOwner {
+    feePercentage = newFeePercentage;
+  }
+
+  function expectedFee(uint256 tokenId) public view returns (uint256) {
+    return _expectedFee(tokenId);
+  }
+
+  function expectedBuyCost(uint256 tokenId) public view returns (uint256) {
+    return tokenConfig[tokenId].price + _expectedFee(tokenId);
+  }
+
   function buy(uint256 tokenId) public {
     require(_exists(tokenId), 'Token does not exist');
     require(msg.sender != tokenConfig[tokenId].owner, 'You are the owner');
@@ -77,6 +89,7 @@ contract Nft is ERC721URIStorage, Ownable {
     );
 
     tokenConfig[tokenId].owner = msg.sender;
+    _collectFees(tokenId);
     _increasePrice(tokenId);
   }
 
@@ -93,6 +106,16 @@ contract Nft is ERC721URIStorage, Ownable {
   ) external onlyTokenOwner(tokenId) {
     _transfer(msg.sender, to, tokenId);
     tokenConfig[tokenId].owner = to;
+  }
+
+  function withdrawFees() public onlyOwner {
+    require(
+      IERC20(USDTTokenAddress).transfer(
+        msg.sender,
+        IERC20(USDTTokenAddress).balanceOf(address(this))
+      ),
+      'Withdrawal failed'
+    );
   }
 
   function _increasePrice(uint256 tokenId) internal {
@@ -112,6 +135,21 @@ contract Nft is ERC721URIStorage, Ownable {
         tokenConfig[tokenId].price
       ),
       'Payment failed'
+    );
+  }
+
+  function _expectedFee(uint256 tokenId) internal view returns (uint256) {
+    return (tokenConfig[tokenId].price * feePercentage) / 100;
+  }
+
+  function _collectFees(uint256 tokenId) internal {
+    require(
+      IERC20(USDTTokenAddress).transferFrom(
+        msg.sender,
+        address(this),
+        _expectedFee(tokenId)
+      ),
+      'Fee collection failed'
     );
   }
 
