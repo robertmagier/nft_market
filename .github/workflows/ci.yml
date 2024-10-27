@@ -21,8 +21,11 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install global dependencies
+        run: npm ci
+
+      - name: Install smart contract dependencies
+        run: cd smart_contracts && npm ci
 
       - name: Check formatting
         run: npm run format:check
