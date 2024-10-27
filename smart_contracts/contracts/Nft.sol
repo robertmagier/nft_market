@@ -31,7 +31,7 @@ contract Nft is ERC721URIStorage {
         _;
     }
 
-    function createNew(string memory tokenURI,uint256 price)
+    function create(string memory tokenURI,uint256 price)
         public
     {
         _mint(msg.sender, _tokenId);
