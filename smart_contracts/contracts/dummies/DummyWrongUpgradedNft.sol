@@ -34,8 +34,7 @@ contract DummyWrongUpgradedNft is
   uint256 private _tokenId;
   uint256 private _defaultPriceIncreasePer;
 
-  mapping(uint256 => TokenConfig) public tokenConfig;
-
+  mapping(uint256 tokenId => TokenConfig tokenConfig) public tokenConfig;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
