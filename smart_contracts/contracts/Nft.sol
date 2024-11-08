@@ -32,10 +32,15 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
 
   mapping(uint256 => TokenConfig) public tokenConfig;
 
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   function initialize(address USDT) public initializer {
     USDTTokenAddress = USDT;
     __ERC721_init('NFT', 'NFT');
-    __Ownable_init();
+    __Ownable_init(msg.sender);
     feePercentage = 5;
     _tokenId = 1;
     _defaultPriceIncreasePer = 10;
@@ -130,6 +135,10 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
       (tokenConfig[tokenId].price * _defaultPriceIncreasePer) /
       100;
     tokenConfig[tokenId].price = newPrice;
+  }
+
+  function _exists(uint256 tokenId) internal view returns (bool) {
+    return ownerOf(tokenId) != address(0);
   }
 
   function _collectPayment(uint256 tokenId) internal {

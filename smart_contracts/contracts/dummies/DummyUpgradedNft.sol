@@ -32,10 +32,15 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
 
   mapping(uint256 => TokenConfig) public tokenConfig;
 
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
+  }
+
   function initialize(address USDT) public initializer {
     USDTTokenAddress = USDT;
     __ERC721_init('NFT', 'NFT');
-    __Ownable_init();
+    __Ownable_init(msg.sender);
     feePercentage = 5;
     _tokenId = 1;
     _defaultPriceIncreasePer = 10;
@@ -121,6 +126,10 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
       ),
       'Withdrawal failed'
     );
+  }
+
+  function _exists(uint256 tokenId) internal view returns (bool) {
+    return ownerOf(tokenId) != address(0);
   }
 
   function _increasePrice(uint256 tokenId) internal {
