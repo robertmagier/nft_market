@@ -6,6 +6,7 @@ import { ERC721URIStorageUpgradeable } from '@openzeppelin/contracts-upgradeable
 import { OwnableUpgradeable } from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
+/// @custom:security-contact N/A
 contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   event TokenCreated(
     uint256 indexed tokenId,
