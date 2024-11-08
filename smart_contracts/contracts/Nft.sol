@@ -31,7 +31,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   uint256 private _tokenId;
   uint256 private _defaultPriceIncreasePer;
 
-  mapping(uint256 => TokenConfig) public tokenConfig;
+  mapping(uint256 tokenId => TokenConfig config) public tokenConfig;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
