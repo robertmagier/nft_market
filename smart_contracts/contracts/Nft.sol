@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import { ERC721URIStorageUpgradeable } from '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol';
+import { OwnableUpgradeable } from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   event TokenCreated(
