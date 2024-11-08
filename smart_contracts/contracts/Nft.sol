@@ -8,16 +8,16 @@ import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   event TokenCreated(
-    uint256 tokenId,
+    uint256 indexed tokenId,
     string tokenURI,
     uint256 price,
-    address owner
+    address indexed owner
   );
   event TokenBought(
-    uint256 tokenId,
+    uint256 indexed tokenId,
     uint256 price,
-    address seller,
-    address buyer
+    address indexed seller,
+    address indexed buyer
   );
 
   struct TokenConfig {
