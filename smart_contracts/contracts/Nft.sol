@@ -38,7 +38,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     _disableInitializers();
   }
 
-  function initialize(address USDT) public initializer {
+  function initialize(address USDT) external initializer {
     USDTTokenAddress = USDT;
     __ERC721_init('NFT', 'NFT');
     __Ownable_init(msg.sender);
@@ -56,7 +56,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   function create(
     string memory tokenURI,
     uint256 price
-  ) public returns (uint256) {
+  ) external returns (uint256) {
     require(bytes(tokenURI).length > 0, 'URI is empty');
     uint256 newId = _tokenId;
     _mint(msg.sender, newId);
@@ -68,19 +68,19 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     return newId;
   }
 
-  function setFeePercentage(uint256 newFeePercentage) public onlyOwner {
+  function setFeePercentage(uint256 newFeePercentage) external onlyOwner {
     feePercentage = newFeePercentage;
   }
 
-  function expectedFee(uint256 tokenId) public view returns (uint256) {
+  function expectedFee(uint256 tokenId) external view returns (uint256) {
     return _expectedFee(tokenId);
   }
 
-  function expectedBuyCost(uint256 tokenId) public view returns (uint256) {
+  function expectedBuyCost(uint256 tokenId) external view returns (uint256) {
     return tokenConfig[tokenId].price + _expectedFee(tokenId);
   }
 
-  function buy(uint256 tokenId) public {
+  function buy(uint256 tokenId) external {
     require(_exists(tokenId), 'Token does not exist');
     require(msg.sender != tokenConfig[tokenId].owner, 'You are the owner');
     require(tokenConfig[tokenId].price > 0, 'Token not for sale');
@@ -107,7 +107,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   function setPrice(
     uint256 tokenId,
     uint256 price
-  ) public onlyTokenOwner(tokenId) {
+  ) external onlyTokenOwner(tokenId) {
     tokenConfig[tokenId].price = price;
   }
 
@@ -119,7 +119,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     tokenConfig[tokenId].owner = to;
   }
 
-  function withdrawFees() public onlyOwner {
+  function withdrawFees() external onlyOwner {
     require(
       IERC20(USDTTokenAddress).transfer(
         msg.sender,
@@ -129,7 +129,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     );
   }
 
-  function _increasePrice(uint256 tokenId) internal {
+  function _increasePrice(uint256 tokenId) private {
     require(_exists(tokenId), 'Token does not exist');
     require(tokenConfig[tokenId].owner == msg.sender, 'You are not the owner');
     uint256 newPrice = tokenConfig[tokenId].price +
@@ -138,11 +138,11 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     tokenConfig[tokenId].price = newPrice;
   }
 
-  function _exists(uint256 tokenId) internal view returns (bool) {
+  function _exists(uint256 tokenId) private view returns (bool) {
     return ownerOf(tokenId) != address(0);
   }
 
-  function _collectPayment(uint256 tokenId) internal {
+  function _collectPayment(uint256 tokenId) private {
     require(
       IERC20(USDTTokenAddress).transferFrom(
         msg.sender,
@@ -153,11 +153,11 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     );
   }
 
-  function _expectedFee(uint256 tokenId) internal view returns (uint256) {
+  function _expectedFee(uint256 tokenId) private view returns (uint256) {
     return (tokenConfig[tokenId].price * feePercentage) / 100;
   }
 
-  function _collectFees(uint256 tokenId) internal {
+  function _collectFees(uint256 tokenId) private {
     require(
       IERC20(USDTTokenAddress).transferFrom(
         msg.sender,
