@@ -1,10 +1,8 @@
-import {
-  time,
-  loadFixture,
-} from '@nomicfoundation/hardhat-toolbox/network-helpers';
-import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
+import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import hre from 'hardhat';
+import { DummyUpgradedNft, Nft, Nft__factory } from '../typechain-types';
+import { StorageUpgradeErrors } from '@openzeppelin/upgrades-core';
 
 describe('Nft', function () {
   // We define a fixture to reuse the same setup in every test.
@@ -15,9 +13,13 @@ describe('Nft', function () {
 
     const USDT = await hre.ethers.getContractFactory('DummyUSDT');
     const usdt = await USDT.deploy();
+    await usdt.waitForDeployment();
 
-    const Nft = await hre.ethers.getContractFactory('Nft');
-    const nft = await Nft.deploy(usdt);
+    const NftFactory = await hre.ethers.getContractFactory('Nft');
+    const nft = (await hre.upgrades.deployProxy(NftFactory, [
+      await usdt.getAddress(),
+    ])) as unknown as Nft;
+    await nft.waitForDeployment();
 
     return { owner, otherAccount, usdt, nft };
   }
@@ -27,6 +29,28 @@ describe('Nft', function () {
       const { usdt, nft, owner } = await loadFixture(deployNft);
       expect(await nft.USDTTokenAddress()).to.be.equal(await usdt.getAddress());
       expect(await nft.owner()).to.be.equal(owner.address);
+    });
+  });
+  describe('Upgrade Nft Contract', function () {
+    it('Should correctly upgrade Nft contract', async function () {
+      const { nft } = await loadFixture(deployNft);
+      const NftV2Factory =
+        await hre.ethers.getContractFactory('DummyUpgradedNft');
+      const nftV2 = (await hre.upgrades.upgradeProxy(
+        await nft.getAddress(),
+        NftV2Factory
+      )) as unknown as DummyUpgradedNft;
+      expect(await nftV2.newFunction()).to.be.equal('new function');
+    });
+    it('Should not upgrade if there is a storage mismatch', async function () {
+      const { nft } = await loadFixture(deployNft);
+      const NftV2Factory = await hre.ethers.getContractFactory(
+        'DummyWrongUpgradedNft'
+      );
+
+      await expect(
+        hre.upgrades.upgradeProxy(await nft.getAddress(), NftV2Factory)
+      ).rejectedWith(StorageUpgradeErrors);
     });
   });
 
@@ -88,16 +112,6 @@ describe('Nft', function () {
     });
   });
 
-  // Implement unit tests for smart contract buy functionality:
-
-  // Nft Owner should not be able to buy his/her nft.
-  // Owner can transfer NFT. In this case price doesn't change.
-  // Buy function increases price automatically.
-  // Owner can change NFT price.
-  // If price is set to 0 then buying is disabled.
-  // If buyer didn't approve USDC for our smart contract then buy function should fail.
-  // If user doesn't have enough USDC then buy should fail.
-
   describe('Buy', async function () {
     it('Nft Owner should not be able to his nft', async function () {
       const uri = 'testURI';
@@ -121,7 +135,7 @@ describe('Nft', function () {
     it('Buy function increases price automatically.', async function () {
       const uri = 'testURI';
       const price = 1000;
-      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      const { otherAccount, nft, usdt } = await loadFixture(deployNft);
       await nft.create(uri, price);
       const currentNft = nft.connect(otherAccount);
       const expectedCost = await nft.expectedBuyCost(1);

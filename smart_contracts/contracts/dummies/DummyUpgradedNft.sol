@@ -6,7 +6,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URISto
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
+contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   event TokenCreated(
     uint256 tokenId,
     string tokenURI,
@@ -156,5 +156,9 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
       ),
       'Fee collection failed'
     );
+  }
+
+  function newFunction() public pure returns (string memory) {
+    return 'new function';
   }
 }
