@@ -160,6 +160,6 @@ This project is licensed under the MIT License.
 
 ---
 
-**Security Disclaimer**: Test your contracts thoroughly on test networks before deploying to mainnet. Be aware of Ethereum mainnet fees and associated risks. This smart contract was not audited. 
+**Security Disclaimer**: Test your contracts thoroughly on test networks before deploying to mainnet. Be aware of Ethereum mainnet fees and associated risks. This smart contract was not audited.
 
 **Contact**: Reach out if you have questions or encounter issues.
