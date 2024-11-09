@@ -19,6 +19,9 @@ error FeeWithdrawalFailed(address token, address owner, uint256 balance);
 /// @title NFT Contract
 /// @notice This contract allows for the minting, buying, and transferring of NFTs with USDT payment and fee handling.
 contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
+  /// @notice Emitted when the contract is initialized.
+  /// @param USDTTokenAddress The address of the USDT token contract.
+  event Initialized(address USDTTokenAddress);
   /// @notice Emitted when a new token is created.
   /// @param tokenId The ID of the newly created token.
   /// @param tokenURI The URI of the token's metadata.
@@ -92,6 +95,7 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     feePercentage = 5;
     _tokenId = 1;
     _defaultPriceIncreasePer = 10;
+    emit Initialized(USDT);
   }
 
   /// @notice Creates a new NFT with a specified URI and price.
