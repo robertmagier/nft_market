@@ -15,6 +15,7 @@ contract DummyUSDT is ERC20('USDC', 'USDC') {
   /// @dev Calls the `_mint` function to mint tokens to the contract deployer. Emits a `Mint` event.
   constructor() {
     _mint(msg.sender, 10 * 10 ** decimals());
+    emit Mint(msg.sender, 10 * 10 ** decimals());
   }
 
   /// @notice Returns the number of decimals used to get the token's smallest unit.
