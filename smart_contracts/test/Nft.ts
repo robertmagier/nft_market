@@ -90,8 +90,9 @@ describe('Nft', function () {
       const price = 1000;
       const { otherAccount, nft } = await loadFixture(deployNft);
       let currentNft = nft.connect(otherAccount);
-      await expect(currentNft.create(uri, price)).to.be.revertedWith(
-        'URI is empty'
+      await expect(currentNft.create(uri, price)).to.be.revertedWithCustomError(
+        nft,
+        'EmptyURI'
       );
     });
 
@@ -118,7 +119,9 @@ describe('Nft', function () {
       const price = 1000;
       const { nft, owner } = await loadFixture(deployNft);
       await nft.create(uri, price);
-      await expect(nft.buy(1)).to.be.revertedWith('You are the owner');
+      await expect(nft.buy(tokenId))
+        .to.be.revertedWithCustomError(nft, 'TokenOwnerNotPermitted')
+        .withArgs(tokenId, owner.address);
     });
 
     it('Owner can transfer token to someone else. In this case price doesnt change', async function () {
@@ -185,7 +188,7 @@ describe('Nft', function () {
       await nft.create(uri, price);
       await expect(
         nft.connect(otherAccount).setPrice(1, newPrice)
-      ).to.be.revertedWith('You are not the owner');
+      ).to.be.revertedWithCustomError(nft, 'NotTokenOwner');
     });
 
     it('If price is set to 0 then buying is disabled.', async function () {
@@ -193,9 +196,9 @@ describe('Nft', function () {
       const price = 0;
       const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
       await nft.create(uri, price);
-      await expect(nft.connect(otherAccount).buy(1)).to.be.revertedWith(
-        'Token not for sale'
-      );
+      await expect(
+        nft.connect(otherAccount).buy(1)
+      ).to.be.revertedWithCustomError(nft, 'TokenNotForSale');
     });
 
     it('If buyer didnt approve USDC for our smart contract then buy function should fail.', async function () {

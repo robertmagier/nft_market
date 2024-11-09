@@ -6,6 +6,26 @@ import { ERC721URIStorageUpgradeable } from '@openzeppelin/contracts-upgradeable
 import { OwnableUpgradeable } from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
+error NonExistingToken(uint256 tokenId);
+error NotTokenOwner(uint256 tokenId, address owner);
+error TokenOwnerNotPermitted(uint256 tokenId, address owner);
+error TokenNotForSale(uint256 tokenId);
+error EmptyURI();
+error PaymentCollectionFailed(
+  address token,
+  address owner,
+  uint256 paymentAmount
+);
+error FeeCollectionFailed(address token, address owner, uint256 feeAmount);
+error InsufficientBalance(
+  address token,
+  address owner,
+  uint256 balance,
+  uint256 required
+);
+
+error FeeWithdrawalFailed(address token, address owner, uint256 balance);
+
 /// @custom:security-contact N/A
 contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   event TokenCreated(
@@ -48,8 +68,12 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   }
 
   modifier onlyTokenOwner(uint256 tokenId) {
-    require(_exists(tokenId), 'Token does not exist');
-    require(tokenConfig[tokenId].owner == msg.sender, 'You are not the owner');
+    if (!_exists(tokenId)) {
+      revert NonExistingToken(tokenId);
+    }
+    if (tokenConfig[tokenId].owner != msg.sender) {
+      revert NotTokenOwner(tokenId, msg.sender);
+    }
     _;
   }
 
@@ -57,7 +81,9 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     string memory tokenURI,
     uint256 price
   ) external returns (uint256) {
-    require(bytes(tokenURI).length > 0, 'URI is empty');
+    if (bytes(tokenURI).length == 0) {
+      revert EmptyURI();
+    }
     uint256 newId = _tokenId;
     _mint(msg.sender, newId);
     _setTokenURI(newId, tokenURI);
@@ -81,14 +107,29 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   }
 
   function buy(uint256 tokenId) external {
-    require(_exists(tokenId), 'Token does not exist');
-    require(msg.sender != tokenConfig[tokenId].owner, 'You are the owner');
-    require(tokenConfig[tokenId].price > 0, 'Token not for sale');
-    require(
-      IERC20(USDTTokenAddress).balanceOf(msg.sender) >=
-        tokenConfig[tokenId].price,
-      'Insufficient USDT balance'
-    );
+    if (!_exists(tokenId)) {
+      revert NonExistingToken(tokenId);
+    }
+    if (tokenConfig[tokenId].owner == msg.sender) {
+      revert TokenOwnerNotPermitted(tokenId, msg.sender);
+    }
+
+    if (tokenConfig[tokenId].price == 0) {
+      revert TokenNotForSale(tokenId);
+    }
+
+    if (
+      IERC20(USDTTokenAddress).balanceOf(msg.sender) <
+      tokenConfig[tokenId].price
+    ) {
+      revert InsufficientBalance(
+        USDTTokenAddress,
+        msg.sender,
+        IERC20(USDTTokenAddress).balanceOf(msg.sender),
+        tokenConfig[tokenId].price
+      );
+    }
+
     _collectPayment(tokenId);
     _transfer(tokenConfig[tokenId].owner, msg.sender, tokenId);
 
