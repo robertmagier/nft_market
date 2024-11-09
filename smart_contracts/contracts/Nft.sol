@@ -106,14 +106,9 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     return tokenConfig[tokenId].price + _expectedFee(tokenId);
   }
 
-  function buy(uint256 tokenId) external {
-    if (!_exists(tokenId)) {
-      revert NonExistingToken(tokenId);
-    }
-    if (tokenConfig[tokenId].owner == msg.sender) {
-      revert TokenOwnerNotPermitted(tokenId, msg.sender);
-    }
-
+  function buy(
+    uint256 tokenId
+  ) external notTokenOwner(tokenId) tokenExists(tokenId) {
     if (tokenConfig[tokenId].price == 0) {
       revert TokenNotForSale(tokenId);
     }
@@ -177,12 +172,24 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   }
 
   function _increasePrice(uint256 tokenId) private {
-    require(_exists(tokenId), 'Token does not exist');
-    require(tokenConfig[tokenId].owner == msg.sender, 'You are not the owner');
     uint256 newPrice = tokenConfig[tokenId].price +
       (tokenConfig[tokenId].price * _defaultPriceIncreasePer) /
       100;
     tokenConfig[tokenId].price = newPrice;
+  }
+
+  modifier tokenExists(uint256 tokenId) {
+    if (!_exists(tokenId)) {
+      revert NonExistingToken(tokenId);
+    }
+    _;
+  }
+
+  modifier notTokenOwner(uint256 tokenId) {
+    if (tokenConfig[tokenId].owner == msg.sender) {
+      revert TokenOwnerNotPermitted(tokenId, msg.sender);
+    }
+    _;
   }
 
   function _exists(uint256 tokenId) private view returns (bool) {
