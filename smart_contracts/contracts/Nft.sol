@@ -127,18 +127,6 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
       revert TokenNotForSale(tokenId);
     }
 
-    if (
-      IERC20(USDTTokenAddress).balanceOf(msg.sender) <
-      tokenConfig[tokenId].price
-    ) {
-      revert InsufficientBalance(
-        USDTTokenAddress,
-        msg.sender,
-        IERC20(USDTTokenAddress).balanceOf(msg.sender),
-        tokenConfig[tokenId].price
-      );
-    }
-
     _collectPayment(tokenId);
     _transfer(tokenConfig[tokenId].owner, msg.sender, tokenId);
 
