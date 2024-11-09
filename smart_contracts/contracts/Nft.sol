@@ -36,6 +36,13 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   /// @param buyer The address of the buyer.
   event TokenBought(uint256 indexed tokenId, uint256 price, address indexed seller, address indexed buyer);
 
+  /// @notice Emitted when a token's price is set.
+  /// @param tokenId The ID of the token.
+  /// @param price The new price in USDT.
+  /// @param oldPrice The old price in USDT.
+  /// @param owner The current owner of the token.
+  event TokenPriceSet(uint256 indexed tokenId, uint256 price, uint256 oldPrice, address indexed owner);
+
   struct TokenConfig {
     uint256 price;
     address owner;
@@ -112,6 +119,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     tokenConfig[newId] = TokenConfig(price, msg.sender);
 
     _tokenId++;
+    emit TokenPriceSet(newId, price, 0, msg.sender);
     emit TokenCreated(newId, tokenURI, price, msg.sender);
     return newId;
   }
@@ -158,6 +166,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   /// @param tokenId The ID of the token.
   /// @param price The new price in USDT.
   function setPrice(uint256 tokenId, uint256 price) external onlyTokenOwner(tokenId) {
+    emit TokenPriceSet(tokenId, price, tokenConfig[tokenId].price, msg.sender);
     tokenConfig[tokenId].price = price;
   }
 
@@ -166,6 +175,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   /// @param tokenId The ID of the token to transfer.
   function transfer(address to, uint256 tokenId) external onlyTokenOwner(tokenId) {
     _transfer(msg.sender, to, tokenId);
+    // TODO: We dont need this config property because ERC721URIStorageUpgradeable already has ownerOf function
     tokenConfig[tokenId].owner = to;
   }
 
@@ -180,6 +190,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   /// @param tokenId The ID of the token.
   function _increasePrice(uint256 tokenId) private {
     uint256 newPrice = tokenConfig[tokenId].price + (tokenConfig[tokenId].price * _defaultPriceIncreasePer) / 100;
+    emit TokenPriceSet(tokenId, newPrice, tokenConfig[tokenId].price, tokenConfig[tokenId].owner);
     tokenConfig[tokenId].price = newPrice;
   }
 
