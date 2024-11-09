@@ -1,13 +1,10 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import hre from 'hardhat';
-import { DummyUpgradedNft, Nft, Nft__factory } from '../typechain-types';
+import { DummyUpgradedNft, Nft } from '../typechain-types';
 import { StorageUpgradeErrors } from '@openzeppelin/upgrades-core';
 
 describe('Nft', function () {
-  // We define a fixture to reuse the same setup in every test.
-  // We use loadFixture to run this setup once, snapshot that state,
-  // and reset Hardhat Network to that snapshot in every test.
   async function deployNft() {
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
@@ -114,9 +111,10 @@ describe('Nft', function () {
   });
 
   describe('Buy', async function () {
-    it('Nft Owner should not be able to his nft', async function () {
+    it('Nft Owner should not be able to buy his nft', async function () {
       const uri = 'testURI';
       const price = 1000;
+      const tokenId = 1;
       const { nft, owner } = await loadFixture(deployNft);
       await nft.create(uri, price);
       await expect(nft.buy(tokenId))
@@ -127,10 +125,11 @@ describe('Nft', function () {
     it('Owner can transfer token to someone else. In this case price doesnt change', async function () {
       const uri = 'testURI';
       const price = 1000;
-      const { owner, otherAccount, nft } = await loadFixture(deployNft);
+      const tokenId = 1;
+      const { otherAccount, nft } = await loadFixture(deployNft);
       await nft.create(uri, price);
-      await nft.transfer(otherAccount.address, 1);
-      const tokenConfig = await nft.tokenConfig(1);
+      await nft.transfer(otherAccount.address, tokenId);
+      const tokenConfig = await nft.tokenConfig(tokenId);
       expect(tokenConfig.owner).to.be.equal(otherAccount.address);
       expect(tokenConfig.price).to.be.equal(price);
     });
@@ -224,7 +223,7 @@ describe('Nft', function () {
     it('Fees are calculated on top of buying price', async function () {
       const uri = 'testURI';
       const price = 1000;
-      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      const { otherAccount, nft, usdt } = await loadFixture(deployNft);
       await nft.create(uri, price);
       const currentNft = nft.connect(otherAccount);
       const expectedCost = await nft.expectedBuyCost(1);
@@ -238,7 +237,7 @@ describe('Nft', function () {
     it('Nft Smart Contract collects fees', async function () {
       const uri = 'testURI';
       const price = 1000;
-      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      const { otherAccount, nft, usdt } = await loadFixture(deployNft);
       await nft.create(uri, price);
       const currentNft = nft.connect(otherAccount);
       const expectedCost = await nft.expectedBuyCost(1);
@@ -280,7 +279,7 @@ describe('Nft', function () {
       const uri = 'testURI';
       const price = 1000;
       const newFeePercentage = 20;
-      const { owner, otherAccount, nft, usdt } = await loadFixture(deployNft);
+      const { otherAccount, nft, usdt } = await loadFixture(deployNft);
       await nft.create(uri, price);
       await nft.setFeePercentage(newFeePercentage);
       const currentNft = nft.connect(otherAccount);
