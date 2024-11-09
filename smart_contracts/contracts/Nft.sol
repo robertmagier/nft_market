@@ -175,7 +175,6 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   /// @param tokenId The ID of the token to transfer.
   function transfer(address to, uint256 tokenId) external onlyTokenOwner(tokenId) {
     _transfer(msg.sender, to, tokenId);
-    // TODO: We dont need this config property because ERC721URIStorageUpgradeable already has ownerOf function
     tokenConfig[tokenId].owner = to;
   }
 
