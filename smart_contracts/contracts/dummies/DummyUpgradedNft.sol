@@ -6,6 +6,26 @@ import { ERC721URIStorageUpgradeable } from '@openzeppelin/contracts-upgradeable
 import { OwnableUpgradeable } from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
+error NonExistingToken(uint256 tokenId);
+error NotTokenOwner(uint256 tokenId, address owner);
+error TokenOwnerNotPermitted(uint256 tokenId, address owner);
+error TokenNotForSale(uint256 tokenId);
+error EmptyURI();
+error PaymentCollectionFailed(
+  address token,
+  address owner,
+  uint256 paymentAmount
+);
+error FeeCollectionFailed(address token, address owner, uint256 feeAmount);
+error InsufficientBalance(
+  address token,
+  address owner,
+  uint256 balance,
+  uint256 required
+);
+
+error FeeWithdrawalFailed(address token, address owner, uint256 balance);
+
 /// @custom:security-contact N/A
 contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   event TokenCreated(
@@ -31,7 +51,31 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   uint256 private _tokenId;
   uint256 private _defaultPriceIncreasePer;
 
-  mapping(uint256 tokenId => TokenConfig tokenConfig) public tokenConfig;
+  mapping(uint256 tokenId => TokenConfig config) public tokenConfig;
+
+  modifier onlyTokenOwner(uint256 tokenId) {
+    if (!_exists(tokenId)) {
+      revert NonExistingToken(tokenId);
+    }
+    if (tokenConfig[tokenId].owner != msg.sender) {
+      revert NotTokenOwner(tokenId, msg.sender);
+    }
+    _;
+  }
+
+  modifier tokenExists(uint256 tokenId) {
+    if (!_exists(tokenId)) {
+      revert NonExistingToken(tokenId);
+    }
+    _;
+  }
+
+  modifier notTokenOwner(uint256 tokenId) {
+    if (tokenConfig[tokenId].owner == msg.sender) {
+      revert TokenOwnerNotPermitted(tokenId, msg.sender);
+    }
+    _;
+  }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -47,17 +91,13 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     _defaultPriceIncreasePer = 10;
   }
 
-  modifier onlyTokenOwner(uint256 tokenId) {
-    require(_exists(tokenId), 'Token does not exist');
-    require(tokenConfig[tokenId].owner == msg.sender, 'You are not the owner');
-    _;
-  }
-
   function create(
     string memory tokenURI,
     uint256 price
   ) external returns (uint256) {
-    require(bytes(tokenURI).length > 0, 'URI is empty');
+    if (bytes(tokenURI).length == 0) {
+      revert EmptyURI();
+    }
     uint256 newId = _tokenId;
     _mint(msg.sender, newId);
     _setTokenURI(newId, tokenURI);
@@ -80,15 +120,13 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     return tokenConfig[tokenId].price + _expectedFee(tokenId);
   }
 
-  function buy(uint256 tokenId) external {
-    require(_exists(tokenId), 'Token does not exist');
-    require(msg.sender != tokenConfig[tokenId].owner, 'You are the owner');
-    require(tokenConfig[tokenId].price > 0, 'Token not for sale');
-    require(
-      IERC20(USDTTokenAddress).balanceOf(msg.sender) >=
-        tokenConfig[tokenId].price,
-      'Insufficient USDT balance'
-    );
+  function buy(
+    uint256 tokenId
+  ) external notTokenOwner(tokenId) tokenExists(tokenId) {
+    if (tokenConfig[tokenId].price == 0) {
+      revert TokenNotForSale(tokenId);
+    }
+
     _collectPayment(tokenId);
     _transfer(tokenConfig[tokenId].owner, msg.sender, tokenId);
 
@@ -100,7 +138,8 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     );
 
     tokenConfig[tokenId].owner = msg.sender;
-    _collectFees(tokenId);
+    uint256 fee = _expectedFee(tokenId);
+    _collectFees(fee);
     _increasePrice(tokenId);
   }
 
@@ -120,52 +159,57 @@ contract DummyUpgradedNft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   }
 
   function withdrawFees() external onlyOwner {
-    require(
-      IERC20(USDTTokenAddress).transfer(
+    if (
+      !IERC20(USDTTokenAddress).transfer(
         msg.sender,
         IERC20(USDTTokenAddress).balanceOf(address(this))
-      ),
-      'Withdrawal failed'
-    );
-  }
-
-  function _exists(uint256 tokenId) private view returns (bool) {
-    return ownerOf(tokenId) != address(0);
+      )
+    ) {
+      revert FeeWithdrawalFailed(
+        USDTTokenAddress,
+        msg.sender,
+        IERC20(USDTTokenAddress).balanceOf(address(this))
+      );
+    }
   }
 
   function _increasePrice(uint256 tokenId) private {
-    require(_exists(tokenId), 'Token does not exist');
-    require(tokenConfig[tokenId].owner == msg.sender, 'You are not the owner');
     uint256 newPrice = tokenConfig[tokenId].price +
       (tokenConfig[tokenId].price * _defaultPriceIncreasePer) /
       100;
     tokenConfig[tokenId].price = newPrice;
   }
 
+  function _exists(uint256 tokenId) private view returns (bool) {
+    return ownerOf(tokenId) != address(0);
+  }
+
   function _collectPayment(uint256 tokenId) private {
-    require(
-      IERC20(USDTTokenAddress).transferFrom(
+    if (
+      !IERC20(USDTTokenAddress).transferFrom(
         msg.sender,
         tokenConfig[tokenId].owner,
         tokenConfig[tokenId].price
-      ),
-      'Payment failed'
-    );
+      )
+    ) {
+      revert PaymentCollectionFailed(
+        USDTTokenAddress,
+        tokenConfig[tokenId].owner,
+        tokenConfig[tokenId].price
+      );
+    }
   }
 
   function _expectedFee(uint256 tokenId) private view returns (uint256) {
     return (tokenConfig[tokenId].price * feePercentage) / 100;
   }
 
-  function _collectFees(uint256 tokenId) private {
-    require(
-      IERC20(USDTTokenAddress).transferFrom(
-        msg.sender,
-        address(this),
-        _expectedFee(tokenId)
-      ),
-      'Fee collection failed'
-    );
+  function _collectFees(uint256 fee) private {
+    if (
+      !IERC20(USDTTokenAddress).transferFrom(msg.sender, address(this), fee)
+    ) {
+      revert FeeCollectionFailed(USDTTokenAddress, address(this), fee);
+    }
   }
 
   function newFunction() external pure returns (string memory) {
