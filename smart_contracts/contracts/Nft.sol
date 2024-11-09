@@ -53,6 +53,30 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
 
   mapping(uint256 tokenId => TokenConfig config) public tokenConfig;
 
+  modifier onlyTokenOwner(uint256 tokenId) {
+    if (!_exists(tokenId)) {
+      revert NonExistingToken(tokenId);
+    }
+    if (tokenConfig[tokenId].owner != msg.sender) {
+      revert NotTokenOwner(tokenId, msg.sender);
+    }
+    _;
+  }
+
+  modifier tokenExists(uint256 tokenId) {
+    if (!_exists(tokenId)) {
+      revert NonExistingToken(tokenId);
+    }
+    _;
+  }
+
+  modifier notTokenOwner(uint256 tokenId) {
+    if (tokenConfig[tokenId].owner == msg.sender) {
+      revert TokenOwnerNotPermitted(tokenId, msg.sender);
+    }
+    _;
+  }
+
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
@@ -65,16 +89,6 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     feePercentage = 5;
     _tokenId = 1;
     _defaultPriceIncreasePer = 10;
-  }
-
-  modifier onlyTokenOwner(uint256 tokenId) {
-    if (!_exists(tokenId)) {
-      revert NonExistingToken(tokenId);
-    }
-    if (tokenConfig[tokenId].owner != msg.sender) {
-      revert NotTokenOwner(tokenId, msg.sender);
-    }
-    _;
   }
 
   function create(
@@ -176,20 +190,6 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
       (tokenConfig[tokenId].price * _defaultPriceIncreasePer) /
       100;
     tokenConfig[tokenId].price = newPrice;
-  }
-
-  modifier tokenExists(uint256 tokenId) {
-    if (!_exists(tokenId)) {
-      revert NonExistingToken(tokenId);
-    }
-    _;
-  }
-
-  modifier notTokenOwner(uint256 tokenId) {
-    if (tokenConfig[tokenId].owner == msg.sender) {
-      revert TokenOwnerNotPermitted(tokenId, msg.sender);
-    }
-    _;
   }
 
   function _exists(uint256 tokenId) private view returns (bool) {
