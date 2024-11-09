@@ -6,11 +6,19 @@
   "scripts": {
     "test": "echo \"Error: no test specified\"",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,json,css,html,sol,md}": [
+      "prettier --check"
+    ]
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
     "prettier": "^3.3.3"
   }
 }
