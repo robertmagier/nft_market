@@ -13,7 +13,6 @@ error TokenNotForSale(uint256 tokenId);
 error EmptyURI();
 error PaymentCollectionFailed(address token, address owner, uint256 paymentAmount);
 error FeeCollectionFailed(address token, address owner, uint256 feeAmount);
-error InsufficientBalance(address token, address owner, uint256 balance, uint256 required);
 error FeeWithdrawalFailed(address token, address owner, uint256 balance);
 
 /// @custom:security-contact N/A
