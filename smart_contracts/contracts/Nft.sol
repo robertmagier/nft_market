@@ -11,35 +11,16 @@ error NotTokenOwner(uint256 tokenId, address owner);
 error TokenOwnerNotPermitted(uint256 tokenId, address owner);
 error TokenNotForSale(uint256 tokenId);
 error EmptyURI();
-error PaymentCollectionFailed(
-  address token,
-  address owner,
-  uint256 paymentAmount
-);
+error PaymentCollectionFailed(address token, address owner, uint256 paymentAmount);
 error FeeCollectionFailed(address token, address owner, uint256 feeAmount);
-error InsufficientBalance(
-  address token,
-  address owner,
-  uint256 balance,
-  uint256 required
-);
+error InsufficientBalance(address token, address owner, uint256 balance, uint256 required);
 
 error FeeWithdrawalFailed(address token, address owner, uint256 balance);
 
 /// @custom:security-contact N/A
 contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
-  event TokenCreated(
-    uint256 indexed tokenId,
-    string tokenURI,
-    uint256 price,
-    address indexed owner
-  );
-  event TokenBought(
-    uint256 indexed tokenId,
-    uint256 price,
-    address indexed seller,
-    address indexed buyer
-  );
+  event TokenCreated(uint256 indexed tokenId, string tokenURI, uint256 price, address indexed owner);
+  event TokenBought(uint256 indexed tokenId, uint256 price, address indexed seller, address indexed buyer);
 
   struct TokenConfig {
     uint256 price;
@@ -91,10 +72,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     _defaultPriceIncreasePer = 10;
   }
 
-  function create(
-    string memory tokenURI,
-    uint256 price
-  ) external returns (uint256) {
+  function create(string memory tokenURI, uint256 price) external returns (uint256) {
     if (bytes(tokenURI).length == 0) {
       revert EmptyURI();
     }
@@ -120,9 +98,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     return tokenConfig[tokenId].price + _expectedFee(tokenId);
   }
 
-  function buy(
-    uint256 tokenId
-  ) external notTokenOwner(tokenId) tokenExists(tokenId) {
+  function buy(uint256 tokenId) external notTokenOwner(tokenId) tokenExists(tokenId) {
     if (tokenConfig[tokenId].price == 0) {
       revert TokenNotForSale(tokenId);
     }
@@ -130,12 +106,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     _collectPayment(tokenId);
     _transfer(tokenConfig[tokenId].owner, msg.sender, tokenId);
 
-    emit TokenBought(
-      tokenId,
-      tokenConfig[tokenId].price,
-      msg.sender,
-      tokenConfig[tokenId].owner
-    );
+    emit TokenBought(tokenId, tokenConfig[tokenId].price, msg.sender, tokenConfig[tokenId].owner);
 
     tokenConfig[tokenId].owner = msg.sender;
     uint256 fee = _expectedFee(tokenId);
@@ -143,40 +114,23 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     _increasePrice(tokenId);
   }
 
-  function setPrice(
-    uint256 tokenId,
-    uint256 price
-  ) external onlyTokenOwner(tokenId) {
+  function setPrice(uint256 tokenId, uint256 price) external onlyTokenOwner(tokenId) {
     tokenConfig[tokenId].price = price;
   }
 
-  function transfer(
-    address to,
-    uint256 tokenId
-  ) external onlyTokenOwner(tokenId) {
+  function transfer(address to, uint256 tokenId) external onlyTokenOwner(tokenId) {
     _transfer(msg.sender, to, tokenId);
     tokenConfig[tokenId].owner = to;
   }
 
   function withdrawFees() external onlyOwner {
-    if (
-      !IERC20(USDTTokenAddress).transfer(
-        msg.sender,
-        IERC20(USDTTokenAddress).balanceOf(address(this))
-      )
-    ) {
-      revert FeeWithdrawalFailed(
-        USDTTokenAddress,
-        msg.sender,
-        IERC20(USDTTokenAddress).balanceOf(address(this))
-      );
+    if (!IERC20(USDTTokenAddress).transfer(msg.sender, IERC20(USDTTokenAddress).balanceOf(address(this)))) {
+      revert FeeWithdrawalFailed(USDTTokenAddress, msg.sender, IERC20(USDTTokenAddress).balanceOf(address(this)));
     }
   }
 
   function _increasePrice(uint256 tokenId) private {
-    uint256 newPrice = tokenConfig[tokenId].price +
-      (tokenConfig[tokenId].price * _defaultPriceIncreasePer) /
-      100;
+    uint256 newPrice = tokenConfig[tokenId].price + (tokenConfig[tokenId].price * _defaultPriceIncreasePer) / 100;
     tokenConfig[tokenId].price = newPrice;
   }
 
@@ -185,18 +139,8 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   }
 
   function _collectPayment(uint256 tokenId) private {
-    if (
-      !IERC20(USDTTokenAddress).transferFrom(
-        msg.sender,
-        tokenConfig[tokenId].owner,
-        tokenConfig[tokenId].price
-      )
-    ) {
-      revert PaymentCollectionFailed(
-        USDTTokenAddress,
-        tokenConfig[tokenId].owner,
-        tokenConfig[tokenId].price
-      );
+    if (!IERC20(USDTTokenAddress).transferFrom(msg.sender, tokenConfig[tokenId].owner, tokenConfig[tokenId].price)) {
+      revert PaymentCollectionFailed(USDTTokenAddress, tokenConfig[tokenId].owner, tokenConfig[tokenId].price);
     }
   }
 
@@ -205,9 +149,7 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
   }
 
   function _collectFees(uint256 fee) private {
-    if (
-      !IERC20(USDTTokenAddress).transferFrom(msg.sender, address(this), fee)
-    ) {
+    if (!IERC20(USDTTokenAddress).transferFrom(msg.sender, address(this), fee)) {
       revert FeeCollectionFailed(USDTTokenAddress, address(this), fee);
     }
   }
