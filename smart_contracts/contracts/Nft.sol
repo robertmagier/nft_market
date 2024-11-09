@@ -141,7 +141,8 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     );
 
     tokenConfig[tokenId].owner = msg.sender;
-    _collectFees(tokenId);
+    uint256 fee = _expectedFee(tokenId);
+    _collectFees(fee);
     _increasePrice(tokenId);
   }
 
@@ -208,14 +209,11 @@ contract Nft is ERC721URIStorageUpgradeable, OwnableUpgradeable {
     return (tokenConfig[tokenId].price * feePercentage) / 100;
   }
 
-  function _collectFees(uint256 tokenId) private {
-    require(
-      IERC20(USDTTokenAddress).transferFrom(
-        msg.sender,
-        address(this),
-        _expectedFee(tokenId)
-      ),
-      'Fee collection failed'
-    );
+  function _collectFees(uint256 fee) private {
+    if (
+      !IERC20(USDTTokenAddress).transferFrom(msg.sender, address(this), fee)
+    ) {
+      revert FeeCollectionFailed(USDTTokenAddress, address(this), fee);
+    }
   }
 }
