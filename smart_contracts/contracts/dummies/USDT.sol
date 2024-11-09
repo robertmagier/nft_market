@@ -9,8 +9,11 @@ import { ERC20 } from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 /// @dev Extends the ERC20 token standard with a fixed initial supply.
 /// @custom:security-contact N/A
 contract DummyUSDT is ERC20('USDC', 'USDC') {
-
+  /// @notice Emitted when tokens are minted.
+  /// @param to The address that received the tokens.
+  /// @param amount The amount of tokens minted.
   event Mint(address indexed to, uint256 amount);
+
   /// @notice Mints an initial supply of 10 USDC tokens to the deployer.
   /// @dev Calls the `_mint` function to mint tokens to the contract deployer. Emits a `Mint` event.
   constructor() {
